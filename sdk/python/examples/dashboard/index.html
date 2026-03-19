@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEP-1913 Trust Annotations — Test Dashboard</title>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3;
+    --text-dim: #8b949e; --accent: #58a6ff; --green: #3fb950; --red: #f85149;
+    --yellow: #d29922; --orange: #db6d28; --purple: #bc8cff; --cyan: #39d353;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.5; }
+
+  /* Header */
+  header { background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
+  header h1 { font-size: 20px; font-weight: 600; }
+  header .badge { background: var(--accent); color: #000; padding: 2px 8px;
+    border-radius: 12px; font-size: 12px; font-weight: 600; }
+  header .status { margin-left: auto; font-size: 13px; color: var(--text-dim); }
+  header .status.connected { color: var(--green); }
+
+  /* Layout */
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border);
+    margin-bottom: 24px; padding-bottom: 0; }
+  .tab { padding: 10px 20px; cursor: pointer; border: 1px solid transparent;
+    border-bottom: none; border-radius: 8px 8px 0 0; font-size: 14px;
+    color: var(--text-dim); background: transparent; transition: all 0.15s; }
+  .tab:hover { color: var(--text); background: var(--surface); }
+  .tab.active { color: var(--text); background: var(--surface);
+    border-color: var(--border); border-bottom-color: var(--surface);
+    margin-bottom: -1px; font-weight: 600; }
+
+  /* Panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+  .card h2 { font-size: 16px; margin-bottom: 12px; display: flex;
+    align-items: center; gap: 8px; }
+  .card h3 { font-size: 14px; color: var(--text-dim); margin-bottom: 8px; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border);
+    color: var(--text-dim); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:hover { background: rgba(88, 166, 255, 0.04); }
+
+  /* Badges */
+  .badge-sm { display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 600; }
+  .badge-none { background: #21262d; color: var(--text-dim); }
+  .badge-user { background: #1f3a1f; color: var(--green); }
+  .badge-pii { background: #3d2800; color: var(--yellow); }
+  .badge-financial { background: #3d1800; color: var(--orange); }
+  .badge-credentials { background: #3d0000; color: var(--red); }
+  .badge-regulated { background: #2a0040; color: var(--purple); }
+  .badge-allow { background: #1f3a1f; color: var(--green); }
+  .badge-block { background: #3d0000; color: var(--red); }
+  .badge-escalate { background: #3d2800; color: var(--yellow); }
+  .badge-warn { background: #3d2800; color: var(--orange); }
+  .badge-audit { background: #21262d; color: var(--text-dim); }
+  .badge-passed { background: #1f3a1f; color: var(--green); }
+  .badge-failed { background: #3d0000; color: var(--red); }
+  .badge-ok { background: #1f3a1f; color: var(--green); }
+  .badge-danger { background: #3d0000; color: var(--red); }
+  .badge-warning { background: #3d2800; color: var(--yellow); }
+  .badge-success { background: #1f3a1f; color: var(--green); }
+
+  /* Hint pills */
+  .hint { display: inline-block; padding: 1px 6px; border-radius: 4px;
+    font-size: 11px; margin: 1px 2px; }
+  .hint-readonly { background: #1f3a1f; color: var(--green); }
+  .hint-destructive { background: #3d2800; color: var(--orange); }
+  .hint-openworld { background: #21262d; color: var(--cyan); }
+  .hint-malicious { background: #3d0000; color: var(--red); }
+  .hint-true { font-weight: 700; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
+    border: 1px solid var(--border); border-radius: 6px; background: var(--surface);
+    color: var(--text); font-size: 13px; cursor: pointer; transition: all 0.15s; }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: #238636; border-color: #2ea043; color: #fff; }
+  .btn-primary:hover { background: #2ea043; border-color: #3fb950; color: #fff; }
+  .btn-danger { border-color: var(--red); color: var(--red); }
+
+  /* JSON viewer */
+  .json-block { background: #0d1117; border: 1px solid var(--border);
+    border-radius: 6px; padding: 12px; font-family: 'SFMono-Regular', Consolas,
+    monospace; font-size: 12px; overflow-x: auto; white-space: pre-wrap;
+    max-height: 400px; overflow-y: auto; }
+
+  /* Timeline */
+  .timeline { border-left: 2px solid var(--border); margin-left: 12px; padding-left: 20px; }
+  .timeline-item { position: relative; margin-bottom: 16px; }
+  .timeline-item::before { content: ''; position: absolute; left: -26px; top: 6px;
+    width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+  .timeline-item.ok::before { background: var(--green); }
+  .timeline-item.danger::before { background: var(--red); }
+  .timeline-item.warning::before { background: var(--yellow); }
+  .timeline-item.success::before { background: var(--green); }
+  .timeline-item .tl-label { font-weight: 600; font-size: 13px; }
+  .timeline-item .tl-detail { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+  /* Spinner */
+  .spinner { display: inline-block; width: 16px; height: 16px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Grid */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* Comparison table */
+  .compare-row { display: grid; grid-template-columns: 200px 1fr 1fr; gap: 1px;
+    background: var(--border); margin-bottom: 1px; }
+  .compare-row > div { background: var(--surface); padding: 8px 12px; font-size: 13px; }
+  .compare-header > div { font-weight: 600; color: var(--text-dim);
+    text-transform: uppercase; font-size: 11px; }
+
+  /* Tool call form */
+  .call-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+  .call-form label { font-size: 12px; color: var(--text-dim); display: block; }
+  .call-form select, .call-form input { background: var(--bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 6px 8px; color: var(--text); font-size: 13px; min-width: 150px; }
+  .call-form select:focus, .call-form input:focus { outline: none; border-color: var(--accent); }
+
+  /* Progress bar */
+  .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .progress-bar .fill { height: 100%; background: var(--accent); transition: width 0.3s;
+    border-radius: 2px; }
+
+  /* Scenario categories */
+  .scenario-group { margin-bottom: 20px; }
+  .scenario-group h3 { font-size: 13px; text-transform: uppercase; color: var(--accent);
+    margin-bottom: 8px; letter-spacing: 0.5px; }
+
+  /* Summary stats */
+  .stats { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+  .stat { text-align: center; min-width: 80px; }
+  .stat .num { font-size: 28px; font-weight: 700; }
+  .stat .label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; }
+
+  /* Collapsible */
+  details { margin-bottom: 8px; }
+  details summary { cursor: pointer; font-size: 13px; color: var(--accent);
+    padding: 4px 0; }
+  details summary:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🛡️ SEP-1913 Trust Annotations</h1>
+  <span class="badge">Test Dashboard</span>
+  <span id="serverStatus" class="status">Checking server...</span>
+</header>
+
+<div class="container">
+
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('tools')">🔧 Tools &amp; Annotations</div>
+    <div class="tab" onclick="showTab('call')">📡 Call Tool</div>
+    <div class="tab" onclick="showTab('single')">▶ Single Client Demo</div>
+    <div class="tab" onclick="showTab('multi')">🔀 Multi-Agent Demo</div>
+    <div class="tab" onclick="showTab('host')">🏛️ Host Policy Scenarios</div>
+    <div class="tab" onclick="showTab('usability')">📝 Usability Tests</div>
+  </div>
+
+  <!-- ═══ Tab 1: Tools & Annotations ═══ -->
+  <div id="panel-tools" class="panel active">
+    <div class="card">
+      <h2>Server Tools with SEP-1913 Trust Annotations</h2>
+      <p style="color:var(--text-dim); font-size:13px; margin-bottom:12px;">
+        All tools registered on the Healthcare Clinic MCP server. Trust annotations enable
+        deterministic policy enforcement without relying on the AI model.
+      </p>
+      <div id="toolsLoading"><span class="spinner"></span> Loading tools...</div>
+      <div id="toolsTable" style="display:none;"></div>
+    </div>
+    <div class="card" id="toolDetailCard" style="display:none;">
+      <h2>Tool Detail — <span id="toolDetailName"></span></h2>
+      <div id="toolDetailContent"></div>
+    </div>
+  </div>
+
+  <!-- ═══ Tab 2: Call Tool ═══ -->
+  <div id="panel-call" class="panel">
+    <div class="card">
+      <h2>Interactive Tool Caller</h2>
+      <p style="color:var(--text-dim); font-size:13px; margin-bottom:12px;">
+        Call any server tool directly and see the result with trust annotation context.
+      </p>
+      <div class="call-form" id="callForm">
+        <div>
+          <label>Tool</label>
+          <select id="callTool"></select>
+        </div>
+        <div id="callArgsContainer"></div>
+        <button class="btn btn-primary" onclick="callTool()">Call Tool</button>
+      </div>
+      <div id="callResult" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <!-- ═══ Tab 3: Single Client Demo ═══ -->
+  <div id="panel-single" class="panel">
+    <div class="card">
+      <h2>▶ Single Client Demo</h2>
+      <p style="color:var(--text-dim); font-size:13px; margin-bottom:12px;">
+        Equivalent to <code>mcp_client.py</code> — connects a single client to the server,
+        lists tools, calls them sequentially, tracks session propagation, and evaluates policy.
+      </p>
+      <div style="margin-bottom:12px;">
+        <strong>Clients:</strong> 1 &nbsp;|&nbsp;
+        <strong>Tools called:</strong> 5 (health_check, patient_lookup, staff_directory, process_insurance_claim, rotate_api_key) &nbsp;|&nbsp;
+        <strong>Policy scenarios:</strong> 5
+      </div>
+      <button class="btn btn-primary" id="btnSingle" onclick="runSingleClient()">
+        ▶ Run Single Client Demo
+      </button>
+      <div id="singleResult" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <!-- ═══ Tab 4: Multi-Agent Demo ═══ -->
+  <div id="panel-multi" class="panel">
+    <div class="card">
+      <h2>🔀 Multi-Agent Data Leak Prevention</h2>
+      <p style="color:var(--text-dim); font-size:13px; margin-bottom:12px;">
+        Equivalent to <code>data_leak_prevention.py</code> — three agents cooperate:
+        Agent A (front-desk) → Agent B (internal analytics) → Agent C (external reporting).
+        Compares behavior WITHOUT vs WITH trust annotations.
+      </p>
+      <div style="margin-bottom:12px;">
+        <strong>Agents:</strong> 3 (A: front-desk, B: analytics, C: external) &nbsp;|&nbsp;
+        <strong>Patient:</strong> Jane Doe (P-12345, HIPAA-regulated PHI) &nbsp;|&nbsp;
+        <strong>Scenarios:</strong> Side-by-side comparison
+      </div>
+      <button class="btn btn-primary" id="btnMulti" onclick="runMultiAgent()">
+        ▶ Run Multi-Agent Demo
+      </button>
+      <div id="multiResult" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <!-- ═══ Tab 5: Host Policy Scenarios ═══ -->
+  <div id="panel-host" class="panel">
+    <div class="card">
+      <h2>🏛️ Host Policy Enforcement Scenarios</h2>
+      <p style="color:var(--text-dim); font-size:13px; margin-bottom:12px;">
+        Equivalent to <code>host.py</code> — runs all 10 policy enforcement scenarios.
+        Calls every tool to build up session state, then evaluates each scenario
+        against the policy engine in ENFORCE mode.
+      </p>
+      <div style="margin-bottom:12px;">
+        <strong>Mode:</strong> ENFORCE (blocks violating calls) &nbsp;|&nbsp;
+        <strong>Scenarios:</strong> 10 across 5 categories (Basic, HIPAA, Credentials, Malicious, Financial, PII)
+      </div>
+      <button class="btn btn-primary" id="btnHost" onclick="runHostScenarios()">
+        ▶ Run Host Scenarios
+      </button>
+      <div id="hostResult" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+  <!-- ═══ Tab 6: Usability Tests ═══ -->
+  <div id="panel-usability" class="panel">
+    <div class="card">
+      <h2>📝 Usability Scenario Tests</h2>
+      <p style="color:var(--text-dim); font-size:13px; margin-bottom:12px;">
+        Runs <code>test_usability_scenarios.py</code> — 10 scenarios testing whether
+        developers reading SEP-1913 can correctly predict trust annotation behavior.
+        Each scenario has oracle tests that reveal the correct answers.
+      </p>
+      <div style="margin-bottom:12px;">
+        <strong>Scenarios:</strong> 10 &nbsp;|&nbsp;
+        <strong>Categories:</strong> Classification, Propagation, Policy, Spec Gaps &nbsp;|&nbsp;
+        <strong>Expected difficulty:</strong> Easy → Hard
+      </div>
+      <button class="btn btn-primary" id="btnUsability" onclick="runUsabilityTests()">
+        ▶ Run Usability Tests
+      </button>
+      <div id="usabilityResult" style="margin-top:16px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── State ──
+let allTools = [];
+
+// ── Tab Management ──
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`#panel-${name}`).classList.add('active');
+  document.querySelectorAll('.tab')[
+    ['tools','call','single','multi','host','usability'].indexOf(name)
+  ].classList.add('active');
+}
+
+// ── Helpers ──
+function sensClass(s) {
+  if (!s || s === 'none' || s === '—') return 'badge-none';
+  if (s.startsWith('regulated')) return 'badge-regulated';
+  if (s === 'credentials') return 'badge-credentials';
+  if (s === 'financial') return 'badge-financial';
+  if (s === 'pii') return 'badge-pii';
+  if (s === 'user') return 'badge-user';
+  return 'badge-none';
+}
+
+function effectClass(e) {
+  return 'badge-' + (e || 'allow');
+}
+
+function badge(text, cls) {
+  return `<span class="badge-sm ${cls}">${text}</span>`;
+}
+
+function hintsHtml(tool) {
+  let h = [];
+  if (tool.readOnlyHint) h.push('<span class="hint hint-readonly">readOnly</span>');
+  if (tool.destructiveHint) h.push('<span class="hint hint-destructive">destructive</span>');
+  if (tool.openWorldHint) h.push('<span class="hint hint-openworld">openWorld</span>');
+  if (tool.maliciousActivityHint) h.push('<span class="hint hint-malicious hint-true">⚡ malicious</span>');
+  return h.join(' ') || '<span style="color:var(--text-dim)">—</span>';
+}
+
+function jsonHtml(obj) {
+  return `<div class="json-block">${escapeHtml(JSON.stringify(obj, null, 2))}</div>`;
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Load Tools ──
+async function loadTools() {
+  try {
+    const r = await fetch('/api/tools');
+    const data = await r.json();
+    if (data.error) throw new Error(data.error);
+    allTools = data.tools;
+    document.getElementById('serverStatus').textContent = '● Server connected';
+    document.getElementById('serverStatus').className = 'status connected';
+    renderToolsTable(data.tools);
+    populateCallDropdown(data.tools);
+  } catch(e) {
+    document.getElementById('serverStatus').textContent = '✗ Server error';
+    document.getElementById('toolsLoading').innerHTML =
+      `<span style="color:var(--red)">Error: ${escapeHtml(e.message)}</span>`;
+  }
+}
+
+function renderToolsTable(tools) {
+  document.getElementById('toolsLoading').style.display = 'none';
+  const el = document.getElementById('toolsTable');
+  el.style.display = 'block';
+
+  let html = `<table>
+    <tr>
+      <th>Tool</th>
+      <th>Sensitivity</th>
+      <th>Source</th>
+      <th>Destination</th>
+      <th>Outcomes</th>
+      <th>Attribution</th>
+      <th>Hints</th>
+    </tr>`;
+
+  for (const t of tools) {
+    html += `<tr onclick="showToolDetail('${t.name}')" style="cursor:pointer;">
+      <td><strong>${t.name}</strong><br><span style="font-size:11px;color:var(--text-dim)">${escapeHtml(t.description || '')}</span></td>
+      <td>${badge(t.sensitivity, sensClass(t.sensitivity))}</td>
+      <td>${t.source}</td>
+      <td>${t.destination}</td>
+      <td>${t.outcomes}</td>
+      <td>${t.attribution.length ? t.attribution.join(', ') : '—'}</td>
+      <td>${hintsHtml(t)}</td>
+    </tr>`;
+  }
+  html += '</table>';
+  el.innerHTML = html;
+}
+
+function showToolDetail(name) {
+  const t = allTools.find(x => x.name === name);
+  if (!t) return;
+  document.getElementById('toolDetailCard').style.display = 'block';
+  document.getElementById('toolDetailName').textContent = name;
+  document.getElementById('toolDetailContent').innerHTML = `
+    <p style="margin-bottom:12px; color:var(--text-dim)">${escapeHtml(t.description || '')}</p>
+    <div class="grid-2">
+      <div>
+        <h3>Trust Annotations (SEP-1913)</h3>
+        ${jsonHtml(t.annotations)}
+      </div>
+      <div>
+        <h3>Summary</h3>
+        <table>
+          <tr><td><strong>Sensitivity</strong></td><td>${badge(t.sensitivity, sensClass(t.sensitivity))}</td></tr>
+          <tr><td><strong>Source</strong></td><td>${t.source}</td></tr>
+          <tr><td><strong>Destination</strong></td><td>${t.destination}</td></tr>
+          <tr><td><strong>Outcomes</strong></td><td>${t.outcomes}</td></tr>
+          <tr><td><strong>Attribution</strong></td><td>${t.attribution.join(', ') || '—'}</td></tr>
+          <tr><td><strong>Read-only</strong></td><td>${t.readOnlyHint ? '✓' : '—'}</td></tr>
+          <tr><td><strong>Destructive</strong></td><td>${t.destructiveHint ? '⚠ Yes' : '—'}</td></tr>
+          <tr><td><strong>Open World</strong></td><td>${t.openWorldHint ? '⚠ Yes' : '—'}</td></tr>
+          <tr><td><strong>Malicious Activity</strong></td><td>${t.maliciousActivityHint ? '⚡ Yes' : '—'}</td></tr>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ── Call Tool ──
+function populateCallDropdown(tools) {
+  const sel = document.getElementById('callTool');
+  sel.innerHTML = tools.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
+  sel.onchange = () => updateCallArgs();
+  updateCallArgs();
+}
+
+function updateCallArgs() {
+  const name = document.getElementById('callTool').value;
+  const t = allTools.find(x => x.name === name);
+  const container = document.getElementById('callArgsContainer');
+  if (!t || !t.inputSchema || !t.inputSchema.properties) {
+    container.innerHTML = '';
+    return;
+  }
+  let html = '';
+  const required = t.inputSchema.required || [];
+  for (const [k, v] of Object.entries(t.inputSchema.properties)) {
+    const req = required.includes(k);
+    const placeholder = v.default !== undefined ? v.default : '';
+    html += `<div><label>${k}${req ? ' *' : ''}</label>
+      <input name="${k}" type="${v.type === 'number' ? 'number' : 'text'}"
+        placeholder="${placeholder}" data-type="${v.type || 'string'}"></div>`;
+  }
+  container.innerHTML = html;
+}
+
+async function callTool() {
+  const name = document.getElementById('callTool').value;
+  const inputs = document.querySelectorAll('#callArgsContainer input');
+  const args = {};
+  inputs.forEach(inp => {
+    if (inp.value) {
+      args[inp.name] = inp.dataset.type === 'number' ? parseFloat(inp.value) : inp.value;
+    }
+  });
+
+  const el = document.getElementById('callResult');
+  el.innerHTML = '<span class="spinner"></span> Calling...';
+
+  try {
+    const r = await fetch('/api/call-tool', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({tool: name, args})
+    });
+    const data = await r.json();
+    if (data.error) throw new Error(data.error);
+
+    const t = allTools.find(x => x.name === name);
+    el.innerHTML = `
+      <div class="grid-2">
+        <div class="card">
+          <h3>Result</h3>
+          ${jsonHtml(data.result)}
+        </div>
+        <div class="card">
+          <h3>Trust Context</h3>
+          <table>
+            <tr><td>Sensitivity</td><td>${badge(t?.sensitivity || '—', sensClass(t?.sensitivity))}</td></tr>
+            <tr><td>Source</td><td>${t?.source || '—'}</td></tr>
+            <tr><td>Destination</td><td>${t?.destination || '—'}</td></tr>
+            <tr><td>Hints</td><td>${t ? hintsHtml(t) : '—'}</td></tr>
+          </table>
+          <h3 style="margin-top:12px">Full Annotations</h3>
+          ${jsonHtml(t?.annotations || {})}
+        </div>
+      </div>`;
+  } catch(e) {
+    el.innerHTML = `<span style="color:var(--red)">Error: ${escapeHtml(e.message)}</span>`;
+  }
+}
+
+// ── Single Client Demo ──
+async function runSingleClient() {
+  const btn = document.getElementById('btnSingle');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Running...';
+  const el = document.getElementById('singleResult');
+  el.innerHTML = '<div class="progress-bar"><div class="fill" style="width:10%"></div></div>';
+
+  try {
+    const r = await fetch('/api/run/single-client', {method: 'POST'});
+    const data = await r.json();
+
+    let html = '';
+
+    // Stats
+    const callStep = data.steps.find(s => s.step === 'call_tools');
+    const policyStep = data.steps.find(s => s.step === 'policy_enforcement');
+    const blocked = policyStep?.scenarios?.filter(s => !s.allowed).length || 0;
+    const allowed = policyStep?.scenarios?.filter(s => s.allowed).length || 0;
+
+    html += `<div class="stats">
+      <div class="stat"><div class="num" style="color:var(--accent)">${callStep?.calls?.length || 0}</div><div class="label">Tools Called</div></div>
+      <div class="stat"><div class="num" style="color:var(--green)">${allowed}</div><div class="label">Allowed</div></div>
+      <div class="stat"><div class="num" style="color:var(--red)">${blocked}</div><div class="label">Blocked</div></div>
+      <div class="stat"><div class="num" style="color:var(--yellow)">${policyStep?.scenarios?.filter(s => s.effect === 'escalate').length || 0}</div><div class="label">Escalated</div></div>
+    </div>`;
+
+    // Tool calls timeline
+    if (callStep?.calls) {
+      html += `<div class="card"><h2>Tool Calls &amp; Session Propagation</h2><div class="timeline">`;
+      for (const c of callStep.calls) {
+        html += `<div class="timeline-item ok">
+          <div class="tl-label">${c.tool}(${Object.entries(c.args).map(([k,v]) => `${k}="${v}"`).join(', ')})</div>
+          <div class="tl-detail">
+            Session: ${badge(c.session_sensitivity, sensClass(c.session_sensitivity))}
+            &nbsp; Attribution: ${c.session_attribution.length ? c.session_attribution.join(', ') : '—'}
+          </div>
+          <details><summary>View result</summary>${jsonHtml(c.result)}</details>
+        </div>`;
+      }
+      html += '</div></div>';
+    }
+
+    // Policy scenarios
+    if (policyStep?.scenarios) {
+      html += `<div class="card"><h2>Policy Enforcement Results</h2><table>
+        <tr><th>Scenario</th><th>Tool</th><th>Destination</th><th>Decision</th><th>Effect</th><th>Rule</th></tr>`;
+      for (const s of policyStep.scenarios) {
+        html += `<tr>
+          <td>${s.description}</td><td><code>${s.tool}</code></td>
+          <td>${s.destination}</td>
+          <td>${badge(s.allowed ? 'ALLOWED' : 'BLOCKED', s.allowed ? 'badge-allow' : 'badge-block')}</td>
+          <td>${badge(s.effect, effectClass(s.effect))}</td>
+          <td><code>${s.rule || '—'}</code></td>
+        </tr>`;
+      }
+      html += '</table></div>';
+    }
+
+    // Session summary
+    const summaryStep = data.steps.find(s => s.step === 'session_summary');
+    if (summaryStep) {
+      html += `<div class="card"><h2>Session Summary</h2>
+        <pre style="font-size:12px;color:var(--text-dim);white-space:pre-wrap">${escapeHtml(summaryStep.summary)}</pre>
+        <details><summary>Wire format (JSON)</summary>${jsonHtml(summaryStep.wire_format)}</details>
+      </div>`;
+    }
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = `<span style="color:var(--red)">Error: ${escapeHtml(e.message)}</span>`;
+  }
+  btn.disabled = false; btn.textContent = '▶ Run Single Client Demo';
+}
+
+// ── Multi-Agent Demo ──
+async function runMultiAgent() {
+  const btn = document.getElementById('btnMulti');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Running...';
+  const el = document.getElementById('multiResult');
+  el.innerHTML = '<div class="progress-bar"><div class="fill" style="width:20%"></div></div>';
+
+  try {
+    const r = await fetch('/api/run/multi-agent', {method: 'POST'});
+    const data = await r.json();
+    const res = data.results;
+
+    let html = `<div class="grid-2">`;
+
+    // WITHOUT column
+    html += `<div class="card" style="border-color:var(--red)">
+      <h2 style="color:var(--red)">❌ WITHOUT Trust Annotations</h2>
+      <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px">Current MCP — no data classification metadata</p>
+      <div class="timeline">`;
+    for (const step of res.without_annotations) {
+      html += `<div class="timeline-item ${step.status}">
+        <div class="tl-label">${step.agent}: ${step.action}</div>
+        <div class="tl-detail">${step.result}</div>
+        ${step.issue ? `<div style="color:var(--red);font-size:12px;margin-top:4px">⚠ ${step.issue}</div>` : ''}
+        ${step.data_preview ? `<details><summary>Data</summary>${jsonHtml(step.data_preview)}</details>` : ''}
+      </div>`;
+    }
+    html += '</div></div>';
+
+    // WITH column
+    html += `<div class="card" style="border-color:var(--green)">
+      <h2 style="color:var(--green)">✅ WITH Trust Annotations (SEP-1913)</h2>
+      <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px">Trust metadata enables deterministic enforcement</p>
+      <div class="timeline">`;
+    for (const step of res.with_annotations) {
+      html += `<div class="timeline-item ${step.status}">
+        <div class="tl-label">${step.agent}: ${step.action}</div>
+        <div class="tl-detail">${step.result}</div>
+        ${step.trust_metadata ? `<details><summary>Trust metadata</summary>${jsonHtml(step.trust_metadata)}</details>` : ''}
+        ${step.policy_decision ? `<details><summary>Policy decision</summary>${jsonHtml(step.policy_decision)}</details>` : ''}
+        ${step.data_preview ? `<details><summary>Data</summary>${jsonHtml(step.data_preview)}</details>` : ''}
+      </div>`;
+    }
+    html += '</div></div></div>';
+
+    // Comparison table
+    html += `<div class="card"><h2>Comparison Summary</h2>
+      <div class="compare-row compare-header">
+        <div>Scenario</div><div style="color:var(--red)">Without SEP-1913</div><div style="color:var(--green)">With SEP-1913</div>
+      </div>
+      <div class="compare-row"><div>A → B (internal)</div><div>⚠ No check</div><div>✓ ALLOW</div></div>
+      <div class="compare-row"><div>B → C (public)</div><div style="color:var(--red)">❌ PHI leaked</div><div style="color:var(--green)">✗ BLOCKED</div></div>
+      <div class="compare-row"><div>B → logs</div><div style="color:var(--red)">❌ PHI in plaintext</div><div style="color:var(--green)">◉ REDACTED</div></div>
+      <div class="compare-row"><div>Audit trail</div><div style="color:var(--red)">None</div><div style="color:var(--green)">✓ Full provenance</div></div>
+      <div class="compare-row"><div>Model needed</div><div style="color:var(--red)">Yes (unreliable)</div><div style="color:var(--green)">No (deterministic)</div></div>
+    </div>`;
+
+    // Session state
+    if (res.session_state) {
+      html += `<div class="card"><h2>Session State (per agent)</h2>
+        <div class="grid-2">
+          <div><h3>Agent A (Front-desk)</h3>${jsonHtml(res.session_state.agent_a)}</div>
+          <div><h3>Agent B (Analytics)</h3>${jsonHtml(res.session_state.agent_b)}</div>
+        </div>
+      </div>`;
+    }
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = `<span style="color:var(--red)">Error: ${escapeHtml(e.message)}</span>`;
+  }
+  btn.disabled = false; btn.textContent = '▶ Run Multi-Agent Demo';
+}
+
+// ── Host Scenarios ──
+async function runHostScenarios() {
+  const btn = document.getElementById('btnHost');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Running...';
+  const el = document.getElementById('hostResult');
+  el.innerHTML = '<div class="progress-bar"><div class="fill" style="width:15%"></div></div>';
+
+  try {
+    const r = await fetch('/api/run/host-scenarios', {method: 'POST'});
+    const data = await r.json();
+
+    const blocked = data.scenarios.filter(s => !s.allowed).length;
+    const allowed = data.scenarios.filter(s => s.allowed).length;
+
+    let html = `<div class="stats">
+      <div class="stat"><div class="num" style="color:var(--accent)">${data.scenarios.length}</div><div class="label">Scenarios</div></div>
+      <div class="stat"><div class="num" style="color:var(--green)">${allowed}</div><div class="label">Allowed</div></div>
+      <div class="stat"><div class="num" style="color:var(--red)">${blocked}</div><div class="label">Blocked</div></div>
+    </div>`;
+
+    // Group by category
+    const groups = {};
+    for (const s of data.scenarios) {
+      if (!groups[s.category]) groups[s.category] = [];
+      groups[s.category].push(s);
+    }
+
+    html += '<div class="card"><h2>Policy Evaluation Results</h2>';
+    for (const [cat, items] of Object.entries(groups)) {
+      html += `<div class="scenario-group"><h3>${cat}</h3><table>
+        <tr><th>Scenario</th><th>Tool</th><th>Dest</th><th>Decision</th><th>Effect</th><th>Rule</th><th>Reason</th></tr>`;
+      for (const s of items) {
+        html += `<tr>
+          <td>${s.description}</td><td><code>${s.tool}</code></td><td>${s.destination}</td>
+          <td>${badge(s.allowed ? 'ALLOWED' : 'BLOCKED', s.allowed ? 'badge-allow' : 'badge-block')}</td>
+          <td>${badge(s.effect, effectClass(s.effect))}</td>
+          <td><code style="font-size:11px">${s.rule || '—'}</code></td>
+          <td style="font-size:12px;color:var(--text-dim)">${s.reason || '—'}</td>
+        </tr>`;
+      }
+      html += '</table></div>';
+    }
+    html += '</div>';
+
+    // Session state
+    html += `<div class="card"><h2>Final Session State</h2>
+      <div class="grid-2">
+        <div>
+          <table>
+            <tr><td><strong>Max Sensitivity</strong></td><td>${badge(data.session.sensitivity, sensClass(data.session.sensitivity))}</td></tr>
+            <tr><td><strong>Open World Hint</strong></td><td>${data.session.open_world_hint ? '⚠ true' : 'false'}</td></tr>
+            <tr><td><strong>Malicious Hint</strong></td><td>${data.session.malicious_activity_hint ? '⚡ true' : 'false'}</td></tr>
+            <tr><td><strong>Attribution</strong></td><td>${data.session.attribution.join(', ') || '—'}</td></tr>
+            <tr><td><strong>Tools Called</strong></td><td>${data.session.call_count}</td></tr>
+          </table>
+        </div>
+        <div><h3>Wire Format</h3>${jsonHtml(data.wire_format)}</div>
+      </div>
+    </div>`;
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = `<span style="color:var(--red)">Error: ${escapeHtml(e.message)}</span>`;
+  }
+  btn.disabled = false; btn.textContent = '▶ Run Host Scenarios';
+}
+
+// ── Usability Tests ──
+async function runUsabilityTests() {
+  const btn = document.getElementById('btnUsability');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Running pytest...';
+  const el = document.getElementById('usabilityResult');
+  el.innerHTML = '<div class="progress-bar"><div class="fill" style="width:10%"></div></div>';
+
+  try {
+    const r = await fetch('/api/run/usability-tests', {method: 'POST'});
+    const data = await r.json();
+
+    const passed = data.tests.filter(t => t.status === 'passed').length;
+    const failed = data.tests.filter(t => t.status === 'failed').length;
+    const total = data.tests.length;
+
+    let html = `<div class="stats">
+      <div class="stat"><div class="num" style="color:var(--accent)">${total}</div><div class="label">Total Tests</div></div>
+      <div class="stat"><div class="num" style="color:var(--green)">${passed}</div><div class="label">Passed</div></div>
+      <div class="stat"><div class="num" style="color:var(--red)">${failed}</div><div class="label">Failed</div></div>
+    </div>`;
+
+    html += `<div class="progress-bar" style="height:8px;margin-bottom:16px">
+      <div class="fill" style="width:${(passed/total*100)}%;background:var(--green)"></div>
+    </div>`;
+
+    // Group by scenario
+    const groups = {};
+    const scenarioNames = {
+      1: 'Simple: Email Send Tool', 2: 'Ambiguous: Save to Workspace',
+      3: 'Sensitivity Monotonic Escalation', 4: 'openWorldHint Persistence',
+      5: 'Data Exfiltration: PII → Public', 6: 'Prompt Injection: Open World + Destructive',
+      7: 'Mode Behavior: enforce vs warn vs audit', 8: 'Sensitivity Propagation Gap',
+      9: 'Host-Detected PII', 10: 'maliciousActivityHint: HITL vs Propagation',
+    };
+
+    for (const t of data.tests) {
+      if (!groups[t.scenario]) groups[t.scenario] = [];
+      groups[t.scenario].push(t);
+    }
+
+    html += '<div class="card"><h2>Test Results by Scenario</h2>';
+    for (const [num, tests] of Object.entries(groups)) {
+      const allPassed = tests.every(t => t.status === 'passed');
+      html += `<div class="scenario-group">
+        <h3>${badge(allPassed ? '✓' : '✗', allPassed ? 'badge-passed' : 'badge-failed')}
+          Scenario ${num} — ${scenarioNames[num] || ''}</h3>
+        <table><tr><th>Test</th><th>Status</th></tr>`;
+      for (const t of tests) {
+        html += `<tr><td><code>${t.test}</code></td>
+          <td>${badge(t.status.toUpperCase(), t.status === 'passed' ? 'badge-passed' : 'badge-failed')}</td></tr>`;
+      }
+      html += '</table></div>';
+    }
+    html += '</div>';
+
+    // Raw output
+    html += `<details><summary>Full pytest output</summary>
+      <div class="json-block">${escapeHtml(data.stdout)}</div></details>`;
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = `<span style="color:var(--red)">Error: ${escapeHtml(e.message)}</span>`;
+  }
+  btn.disabled = false; btn.textContent = '▶ Run Usability Tests';
+}
+
+// ── Init ──
+loadTools();
+</script>
+</body>
+</html>
