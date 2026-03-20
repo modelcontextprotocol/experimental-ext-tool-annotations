@@ -1,4 +1,4 @@
-# Tool Annotations Interest Group
+# experimental-ext-tool-annotations
 
 > ⚠️ **Experimental** — This repository is an incubation space for the Tool Annotations Interest Group. Contents are exploratory and do not represent official MCP specifications or recommendations.
 
