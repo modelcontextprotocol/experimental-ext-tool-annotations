@@ -30,7 +30,7 @@ Tracked here rather than in the spec drafts, so the drafts stay non-temporal.
 - Open strings vs. closed enums for `destination` / `source` / `sensitivity`.
 - Does `requiresReview` need a machine-readable *reason* for good client UX?
 
-## ifc-fides
+## ifc-fides (scheme)
 
 - Inline `_meta.ifc` for low-friction adoption vs. always behind `evidenceRef`.
 - GitHub Enterprise `internal` repo visibility → `public`/`private` mapping

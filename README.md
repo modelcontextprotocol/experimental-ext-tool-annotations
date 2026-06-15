@@ -25,11 +25,14 @@ potential narrower first cut?" The subsequent design discussion converged on a
 layered answer: a small, stable annotation surface on the wire, with richer
 evidence kept out-of-band and referenced by a bounded pointer.
 
-This repo follows that steer. Each concern becomes a **separate experimental
-extension** with its own [reverse-DNS identifier](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/seps/2133-extensions.md#definition),
-its own reference implementation, and its own path to a future Extensions
-Track SEP. Drafts can graduate independently — directly addressing the "narrower
-first cut" ask without throwing away the combinatoric value of the full set.
+This repo follows that steer. The schema-bearing concerns become **separate
+experimental extensions**, each with its own [reverse-DNS identifier](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/seps/2133-extensions.md#definition),
+reference implementation, and path to a future Extensions Track SEP, so drafts
+can graduate independently. The concrete data-labelling models that fill an
+extension's evidence slot are kept separate again — as interchangeable **schemes**
+rather than extensions — so no single academic model is baked into the wire. This
+directly addresses the "narrower first cut" ask without throwing away the
+combinatoric value of the full set.
 
 See [docs/decisions.md](docs/decisions.md) for the decision record and
 [docs/trust-model.md](docs/trust-model.md) for the shared enforcement model.
@@ -40,19 +43,42 @@ See [docs/decisions.md](docs/decisions.md) for the decision record and
 | :--- | :--- | :--- | :--- |
 | [`io.modelcontextprotocol/trust-annotations`](specification/draft/trust-annotations.mdx) | Draft skeleton | **Primary extension.** A small, scheme-agnostic client-facing data-classification vocabulary (`sensitive`, `untrusted`) on result `_meta`, plus an optional `evidenceRef` pointer slot that carries richer payloads out-of-band. | Python SDK: [`kapil8811/mcp-trust-annotations`](https://github.com/kapil8811/mcp-trust-annotations) (138-test suite, healthcare demo, LLM usability study). |
 | [`io.modelcontextprotocol/action-metadata`](specification/draft/action-metadata.mdx) | Draft skeleton | `inputMetadata` / `returnMetadata` / outcome classifiers (incl. `requires_review`) on `ToolAnnotations`, describing where inputs go, where outputs originate, and what real-world effects a tool can cause. | Originally [SEP-2061 (Action Security Metadata)](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2061) by [@rreichel3](https://github.com/rreichel3) — closed 2026-06-13 in favour of this extension; worked example `read_drafts` / `list_inbox` / `send_email`. |
-| [`io.modelcontextprotocol/ifc-fides`](specification/draft/ifc-fides.mdx) | Draft skeleton | A **profile** of the `trust-annotations` `evidenceRef` slot: `type: "ifc.fides.v1"` carrying an integrity + confidentiality label for deterministic information-flow control, following the FIDES paper ([arXiv:2505.23643](https://arxiv.org/abs/2505.23643)). | Emitter candidate: [`github-mcp-server`](https://github.com/github/github-mcp-server) (does not emit IFC labels today — closing that gap is the proof point). |
 
-### Why FIDES is a profile, not a top-level extension
+Each extension is proposed in its own pull request so it can be reviewed and
+graduate on its own clock.
 
-Information-flow control is modelled as a profile rather than the namespace
-root because IFC (an integrity × confidentiality lattice) is one enforcement
-model among several that reviewers raised — capability tokens, caller/tool
-cosigning, and sequence-shape audit records. A top-level `ifc/` root would bake
-one academic model into the namespace and foreclose the others. As one reviewer
-put it, IFC "fits relatively well if you use annotations" — an endorsement of
-IFC *as a profile*, not as the wire root. As a `type` value under
-`trust-annotations`'s open-ended `evidenceRef` slot, the FIDES work stays
-first-class while every other model can occupy the same slot.
+## Data-labelling schemes (the `evidenceRef` slot)
+
+The extensions above keep the wire vocabulary deliberately small. Richer
+labelling lives **out-of-band**, referenced by the `trust-annotations`
+[`evidenceRef`](specification/draft/trust-annotations.mdx) pointer, whose `type`
+is an open string. A **scheme** is a concrete data-labelling or tool-annotation
+approach that fills that slot under a `type` value. A scheme is **not** an
+extension and not a sibling of the two above — it is one interchangeable way to
+populate the evidence an extension carries, and a deployment can adopt, swap, or
+ignore it without touching the extension.
+
+The [`schemes/`](schemes/) folder collects these approaches. **FIDES** is the
+first worked example, defining `ifc.fides.v1`; it is one model among several that
+reviewers and the literature have raised, and the slot is designed so any of them
+can occupy it:
+
+| Scheme | `evidenceRef.type` | Source |
+| :--- | :--- | :--- |
+| FIDES information-flow control (integrity × confidentiality lattice) | `ifc.fides.v1` | [arXiv:2505.23643](https://arxiv.org/abs/2505.23643); emitter candidate [`github-mcp-server`](https://github.com/github/github-mcp-server) |
+| Coarse data classification (4-level + regulatory scope) | `data-class.v1` | SEP-1913 taxonomy |
+| Design-pattern controls (Plan-Then-Execute, Dual LLM, Map-Reduce) | _candidate_ | [arXiv:2506.08837](https://arxiv.org/abs/2506.08837) |
+| Capability-token constraints (SINT) | _candidate_ | pshkv, [SEP-1913 thread](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/1913) |
+| Caller/tool cosigning | _candidate_ | viftode4, SEP-1913 thread |
+| Sequence-shape audit records | _candidate_ | marras0914, SEP-1913 thread |
+| Tool-call attestation (in-toto / OVERT envelopes) | _candidate_ | [SEP-2787](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2787) |
+
+Modelling IFC as a scheme rather than a namespace root is deliberate: a top-level
+`ifc/` extension would bake one academic model into the wire and foreclose the
+others. As one reviewer put it, IFC "fits relatively well if you use annotations"
+— an endorsement of IFC *behind* the annotation slot, not as the slot itself. See
+[`schemes/README.md`](schemes/README.md) for the full list and the bar for adding
+a scheme.
 
 ## Relationship to SEP-1913
 
@@ -84,7 +110,8 @@ This repo mirrors the structure of official extension repositories such as
 [`ext-auth`](https://github.com/modelcontextprotocol/ext-auth):
 
 ```
-specification/draft/<extension-name>.mdx   # one spec per extension
+specification/draft/<extension-name>.mdx   # one spec per extension (trust-annotations, action-metadata)
+schemes/                                    # data-labelling schemes that fill the evidenceRef slot (FIDES, …)
 docs/                                       # decision log, open questions, related work
 MAINTAINERS.md                              # IG facilitators
 ```

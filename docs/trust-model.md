@@ -1,7 +1,7 @@
 # Trust model
 
-A single statement of the enforcement model shared by all extensions in this
-repository, so individual specs don't re-litigate it.
+A single statement of the enforcement model shared across this repository's
+extensions and data-labelling schemes, so individual specs don't re-litigate it.
 
 ## Annotations are claims, not guarantees
 
@@ -41,7 +41,7 @@ SEP-1913 thread): rather than blanket-blocking flows a policy engine is unsure
 about, **flag the specific call for user confirmation**. This preserves utility
 while keeping a human on the genuinely risky edges, and is the recommended
 default for `requiresReview` ([`action-metadata`](../specification/draft/action-metadata.mdx))
-and for IFC policy violations ([`ifc-fides`](../specification/draft/ifc-fides.mdx)).
+and for IFC policy violations (the [`ifc-fides`](../schemes/ifc-fides.md) scheme).
 
 ## Cross-domain is the hard case
 

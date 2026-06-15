@@ -62,7 +62,10 @@ preference:
 - **(C)** Close 1913 outright and open three fresh Extensions Track SEPs. Loses
   the discussion history's continuity; not preferred.
 
-**Moved into extensions:** `trust-annotations`, `action-metadata`, `ifc-fides`.
+**Moved into extensions:** `trust-annotations`, `action-metadata`.
+**Moved into `schemes/`:** the IFC/FIDES work, as one data-labelling **scheme**
+(`ifc.fides.v1`) that fills the `trust-annotations` `evidenceRef` slot — not an
+extension and not a sibling of the two above.
 **Parked on the umbrella:** `maliciousActivityHint`,
 session-level propagation rules. See [open-questions.md](./open-questions.md).
 
@@ -90,14 +93,14 @@ with it if it lands, but do not block on it.
   for Tools)** — tracked by the IG as discussion items; not part of these
   extensions. Cross-link only.
 - **SEP-2787 (Tool Call Attestation)** and the various attestation/evidence
-  threads — these are natural `evidenceRef` *profile* candidates rather than
+  threads — these are natural `evidenceRef` **scheme** candidates rather than
   competitors. Coordinate so the `evidenceRef.type` registry can list them.
 
 ## Mapping table
 
 | SEP | Title | Proposed disposition | Extension home |
 | :-- | :-- | :-- | :-- |
-| 1913 | Trust & Sensitivity Annotations | Umbrella thread; schema moves to extensions | `trust-annotations` (+ `ifc-fides`) |
+| 1913 | Trust & Sensitivity Annotations | Umbrella thread; schema moves to extensions | `trust-annotations` (+ `schemes/ifc-fides`) |
 | 2061 | Action Security Metadata | **Closed 2026-06-13**; lives as extension | `action-metadata` |
 | 1862 | Tool Resolution (pre-flight) | Stays core / Standards Track | — (composes, no dependency) |
 | 1984 | Comprehensive Tool Annotations | IG discussion item | — |

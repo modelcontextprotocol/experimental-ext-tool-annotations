@@ -10,11 +10,11 @@ annotation work. Several were surfaced in IG meetings (notably 2026-05-28).
 - [SEP-1862 — Tool Resolution / pre-flight checks](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/1862) — core-protocol, composes with these extensions.
 - [SEP-2133 — Extensions](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/seps/2133-extensions.md) — the framework this repo incubates under.
 - [SEP-2127 — Server Cards](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2893) — precedent for the Standards→Extensions Track refactor.
-- [SEP-2787 — Tool Call Attestation](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2787) — candidate `evidenceRef` profile.
+- [SEP-2787 — Tool Call Attestation](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2787) — candidate `evidenceRef` scheme.
 
 ## Research
 
-- **FIDES** — *Information-flow control for LLM agents.* [arXiv:2505.23643](https://arxiv.org/abs/2505.23643). Basis for the `ifc.fides.v1` profile.
+- **FIDES** — *Information-flow control for LLM agents.* [arXiv:2505.23643](https://arxiv.org/abs/2505.23643). Basis for the `ifc.fides.v1` scheme in [`schemes/`](../schemes/).
 - **Design Patterns for Securing LLM Agents** — IBM/Google/Microsoft. [arXiv:2506.08837](https://arxiv.org/abs/2506.08837). Plan-Then-Execute, Dual LLM, Map-Reduce, etc.
 - **Trail of Bits** — prompt-injection via hidden content in GitHub issues. [blog](https://blog.trailofbits.com/2025/08/06/prompt-injection-engineering-for-attackers-exploiting-github-copilot/).
 - **OpenAI Auto Review** — https://alignment.openai.com/auto-review/ (shared in IG chat).
@@ -22,7 +22,7 @@ annotation work. Several were surfaced in IG meetings (notably 2026-05-28).
 ## Implementations & tooling
 
 - [`kapil8811/mcp-trust-annotations`](https://github.com/kapil8811/mcp-trust-annotations) — reference Python SDK PoC for `trust-annotations`.
-- [`github-mcp-server`](https://github.com/github/github-mcp-server) — public MCP server; emitter candidate for `ifc-fides` (knows repo visibility + collaborators).
+- [`github-mcp-server`](https://github.com/github/github-mcp-server) — public MCP server; emitter candidate for the `ifc-fides` scheme (knows repo visibility + collaborators).
 - **Ethyca** data-labeling docs — https://www.ethyca.com/docs (shared in IG chat).
 - **GitHub Next** agentic-workflows research on data labeling — to be documented as issues in this repo (IG action item, @gokhanarkan / @joannakl).
 
@@ -35,4 +35,4 @@ annotation work. Several were surfaced in IG meetings (notably 2026-05-28).
 - **Sequence-shape** policies — marras0914.
 
 These are exactly the models that `evidenceRef`'s open `type` is designed to
-accommodate as profiles.
+accommodate as schemes — see [`schemes/`](../schemes/).

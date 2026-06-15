@@ -89,3 +89,31 @@ Resolution. SEP-1862 remains a core/Standards-Track protocol change.
 
 **Rationale.** The 2026-05-28 IG meeting concluded pre-flight is inherently a
 protocol-level change, not an extension.
+
+## 2026-06-16 — FIDES is a scheme, not a sibling extension
+
+**Decision.** Refines the 2026-06-10 "FIDES is a profile" decision. The IFC/FIDES
+work moves out of `specification/draft/` (where it sat next to the two
+extensions) into a `schemes/` folder. There are **two** extensions
+(`trust-annotations`, `action-metadata`); FIDES is **one data-labelling scheme**
+(`ifc.fides.v1`) that fills the `trust-annotations` `evidenceRef` slot.
+
+**Rationale.** FIDES is one model the extension *could* use, not a peer of the
+extensions, and must not be presented as a sibling. The original SEP cites it
+alongside ShardGuard and "Design Patterns for Securing LLM Agents," and the
+SEP-1913 thread adds capability tokens, cosigning, sequence-shape, and
+attestation models — so `schemes/` is a folder for interchangeable approaches,
+with FIDES as the first worked one. This shows the range the open `evidenceRef`
+slot is meant to carry rather than implying IFC is the privileged model.
+
+## 2026-06-16 — Three pull requests, stacked
+
+**Decision.** The work ships as three PRs: `trust-annotations` (the base,
+carrying shared repo scaffolding), `action-metadata` (stacked on the base), and
+the FIDES scheme in `schemes/` (stacked on the base). The two extensions are
+independent; the FIDES scheme depends on `trust-annotations` because it fills
+that extension's `evidenceRef` slot.
+
+**Rationale.** Separate PRs let each piece be reviewed and graduate on its own
+clock. FIDES stacks on `trust-annotations` because a scheme has no meaning
+without the slot it fills.
