@@ -35,25 +35,37 @@ in sync with [sep-disposition.md](./sep-disposition.md).
 > an Extensions Track SEP. Incubation is in
 > [`experimental-ext-tool-annotations`](https://github.com/modelcontextprotocol/experimental-ext-tool-annotations).
 > >
-> Kicking off with a few draft extensions in the tool annotations repo — not
-> sure yet whether they'd each need separate repos eventually, or whether
-> grouping them in one is fine. That's part of what incubation is for.
+> It's now scaffolded as \*\*two extensions plus a `schemes/` folder\*\* of
+> interchangeable data-labelling approaches, shipped as a stacked set of PRs:
+> >
+> - [#2](https://github.com/modelcontextprotocol/experimental-ext-tool-annotations/pull/2) — repo scaffolding + the `trust-annotations` extension (the base).
+> - [#3](https://github.com/modelcontextprotocol/experimental-ext-tool-annotations/pull/3) — the `action-metadata` extension.
+> - [#4](https://github.com/modelcontextprotocol/experimental-ext-tool-annotations/pull/4) — FIDES as a data-labelling \*\*scheme\*\* under `schemes/`.
 > >
 > | Extension | Scope |
 > |---|---|
 > | `trust-annotations` | The narrow data-classification taxonomy (`sensitive`, `untrusted`) + an open-ended `evidenceRef` pointer for richer, out-of-band evidence. |
 > | `action-metadata` | Tool I/O + outcome contract (folds in @rreichel3's SEP-2061). |
-> | `ifc-fides` | Information-flow control ([arXiv:2505.23643](https://arxiv.org/abs/2505.23643)) as **one profile** of `evidenceRef`, not a wire root — the public/private-repo confidentiality case, with github-mcp-server as an emitter example. |
+> >
+> \*\*Data-labelling schemes (the `evidenceRef` slot).\*\* Richer evidence models
+> are \*not\* extensions and \*not\* a wire root. They live in `schemes/` as
+> interchangeable fillers of the `trust-annotations` `evidenceRef` slot, each
+> selected by an `evidenceRef.type` value, so a deployment can adopt one, several,
+> or none without changing the extension. FIDES information-flow control
+> ([arXiv:2505.23643](https://arxiv.org/abs/2505.23643)) is the first worked scheme
+> (`ifc.fides.v1`) — the public/private-repo confidentiality case, with
+> github-mcp-server as an emitter example. The folder is built to hold the range of
+> other models raised in review (coarse data classification, design-pattern
+> controls, capability tokens, cosigning, sequence-shape, attestation).
 > >
 > Deliberately removed: `maliciousActivityHint` (the structural concerns raised
 > here are unresolved) and session-level propagation rules.
 > >
 > This follows the same Standards-Track → Extensions-Track refactor pattern as
-> SEP-2127 (#2893). This PR will eventually pivot to the `trust-annotations`
-> piece itself, with the other schema-bearing pieces moving out into their own
-> extensions. Everything is still in the incubation phase, so naming, design,
-> and the choice of what to put forward as an extension are all open for
-> discussion in the IG.
+> SEP-2127 (#2893). This PR is now the `trust-annotations` base of the stack; the
+> `action-metadata` extension and the `schemes/` folder are stacked on it.
+> Everything is still in the incubation phase, so naming, design, and the choice of
+> what to put forward as an extension are all open for discussion in the IG.
 
 ---
 
