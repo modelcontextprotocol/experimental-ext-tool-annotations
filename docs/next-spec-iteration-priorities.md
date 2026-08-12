@@ -11,11 +11,9 @@ implementation; these priorities are intended to focus discussion and feedback.
 
 Support maintainers and contributors in completing the
 [planned transition of existing SEP proposals](./sep-disposition.md) into fully
-fledged experimental extensions. The IG should gather use cases, coordinate
-review, and establish clear evidence that the community wants and will use each
-extension. Before an Extensions Track SEP is reviewed,
-[SEP-2133](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/seps/2133-extensions.md)
-requires at least one reference implementation in an official SDK.
+fledged experimental extensions with SDK implementations. The IG should gather
+use cases, coordinate review, and establish clear evidence that the community
+wants and will use each extension.
 
 ## 2. Prepare Pre-flight Requests for Review
 
@@ -34,8 +32,7 @@ agents need.
 [PR #7 proposes the `io.modelcontextprotocol/display-templates` experimental extension](https://github.com/modelcontextprotocol/experimental-ext-tool-annotations/pull/7)
 for this purpose, covering both call-side display templates and result-side
 rendered text. This belongs in the chartered discussion of tool-response
-annotations and human-in-the-loop requirements, while any specification change
-would still proceed through the SEP process.
+annotations and human-in-the-loop requirements.
 
 ## 4. Evaluate Annotation Proposals
 
