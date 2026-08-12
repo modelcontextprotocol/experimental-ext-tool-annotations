@@ -30,7 +30,10 @@ protocol proposal rather than an experimental extension, as described in the
 Explore how content intended for human formatting and display can be represented
 separately from content intended for agents. The goal is to let clients provide
 good human-facing experiences without compromising the structured content
-agents need. This belongs in the chartered discussion of tool-response
+agents need.
+[PR #7 proposes the `io.modelcontextprotocol/display-templates` experimental extension](https://github.com/modelcontextprotocol/experimental-ext-tool-annotations/pull/7)
+for this purpose, covering both call-side display templates and result-side
+rendered text. This belongs in the chartered discussion of tool-response
 annotations and human-in-the-loop requirements, while any specification change
 would still proceed through the SEP process.
 
