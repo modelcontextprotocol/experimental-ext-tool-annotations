@@ -1,0 +1,366 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "JsonPrimitive": {
+      "type": ["string", "number", "boolean", "null"],
+      "description": "Wire types for the io.modelcontextprotocol/tool-resolution extension.\n\nThis file is the source of truth for generated JSON Schema and type docs."
+    },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JsonPrimitive"
+        },
+        {
+          "$ref": "#/$defs/JsonObject"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          }
+        }
+      ]
+    },
+    "JsonObject": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      }
+    },
+    "ResolvedToolAnnotations": {
+      "type": "object",
+      "properties": {
+        "readOnlyHint": {
+          "type": "boolean",
+          "description": "True when this invocation does not modify its environment."
+        },
+        "destructiveHint": {
+          "type": "boolean",
+          "description": "True when this invocation may perform destructive updates."
+        },
+        "idempotentHint": {
+          "type": "boolean",
+          "description": "True when repeating this invocation has no additional effect."
+        },
+        "openWorldHint": {
+          "type": "boolean",
+          "description": "True when this invocation may interact with an open world."
+        }
+      },
+      "required": [
+        "readOnlyHint",
+        "destructiveHint",
+        "idempotentHint",
+        "openWorldHint"
+      ],
+      "additionalProperties": false,
+      "description": "Core ToolAnnotations fields whose behavior may be resolved per invocation."
+    },
+    "ToolAnnotations": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Human-readable tool title. This field is not resolvable."
+        },
+        "readOnlyHint": {
+          "type": "boolean"
+        },
+        "destructiveHint": {
+          "type": "boolean"
+        },
+        "idempotentHint": {
+          "type": "boolean"
+        },
+        "openWorldHint": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": {
+        "description": "Namespaced fields owned by negotiated ToolAnnotations extensions."
+      },
+      "description": "Core ToolAnnotations, included here to type the static tools/list fallback."
+    },
+    "Icon": {
+      "type": "object",
+      "properties": {
+        "src": {
+          "type": "string"
+        },
+        "mimeType": {
+          "type": "string"
+        },
+        "sizes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["light", "dark"]
+        }
+      },
+      "required": ["src"],
+      "additionalProperties": false
+    },
+    "Tool": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "object"
+            }
+          },
+          "required": ["type"],
+          "additionalProperties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "annotations": {
+          "$ref": "#/$defs/ToolAnnotations"
+        },
+        "icons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Icon"
+          }
+        },
+        "_meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": ["name", "inputSchema"],
+      "additionalProperties": false,
+      "description": "Minimal core Tool shape used by the reference implementation."
+    },
+    "ToolResolutionToolMetadata": {
+      "type": "object",
+      "properties": {
+        "resolvable": {
+          "type": "boolean",
+          "const": true
+        }
+      },
+      "required": ["resolvable"],
+      "additionalProperties": false,
+      "description": "Per-tool opt-in stored at Tool._meta[\"io.modelcontextprotocol/tool-resolution\"]."
+    },
+    "ResolvableTool": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "object"
+            }
+          },
+          "required": ["type"],
+          "additionalProperties": {}
+        },
+        "outputSchema": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "annotations": {
+          "$ref": "#/$defs/ToolAnnotations"
+        },
+        "icons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Icon"
+          }
+        },
+        "_meta": {
+          "type": "object",
+          "properties": {
+            "io.modelcontextprotocol/tool-resolution": {
+              "$ref": "#/$defs/ToolResolutionToolMetadata"
+            }
+          },
+          "required": ["io.modelcontextprotocol/tool-resolution"],
+          "additionalProperties": {}
+        }
+      },
+      "required": ["_meta", "inputSchema", "name"],
+      "additionalProperties": false,
+      "description": "A tool from tools/list that opts in to argument-specific resolution."
+    },
+    "ToolResolutionCapability": {
+      "type": "object",
+      "additionalProperties": {
+        "not": {}
+      },
+      "description": "The extension currently defines no capability settings."
+    },
+    "ToolResolutionExtensions": {
+      "type": "object",
+      "properties": {
+        "io.modelcontextprotocol/tool-resolution": {
+          "$ref": "#/$defs/ToolResolutionCapability"
+        }
+      },
+      "required": ["io.modelcontextprotocol/tool-resolution"],
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonObject"
+      }
+    },
+    "ToolResolutionClientCapabilities": {
+      "type": "object",
+      "properties": {
+        "extensions": {
+          "$ref": "#/$defs/ToolResolutionExtensions"
+        }
+      },
+      "required": ["extensions"],
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      }
+    },
+    "ToolResolutionRequestMeta": {
+      "type": "object",
+      "properties": {
+        "progressToken": {
+          "type": ["string", "number"]
+        },
+        "io.modelcontextprotocol/protocolVersion": {
+          "type": "string"
+        },
+        "io.modelcontextprotocol/clientCapabilities": {
+          "$ref": "#/$defs/ToolResolutionClientCapabilities"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "ResolveToolRequestParams": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Tool name exactly as returned by tools/list."
+        },
+        "arguments": {
+          "$ref": "#/$defs/JsonObject",
+          "description": "Complete arguments intended for the subsequent tools/call request."
+        },
+        "_meta": {
+          "$ref": "#/$defs/ToolResolutionRequestMeta",
+          "description": "Modern MCP per-request protocol and capability negotiation metadata. Omitted only when using a legacy session whose capabilities were negotiated through initialize."
+        }
+      },
+      "required": ["name", "arguments"],
+      "additionalProperties": false
+    },
+    "ResolveToolRequest": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": {
+          "type": "string",
+          "const": "2.0"
+        },
+        "id": {
+          "type": ["string", "number"]
+        },
+        "method": {
+          "type": "string",
+          "const": "tools/resolve"
+        },
+        "params": {
+          "$ref": "#/$defs/ResolveToolRequestParams"
+        }
+      },
+      "required": ["jsonrpc", "id", "method", "params"],
+      "additionalProperties": false,
+      "description": "Extension-defined tools/resolve request."
+    },
+    "ResolveToolResult": {
+      "type": "object",
+      "properties": {
+        "resultType": {
+          "type": "string",
+          "const": "complete",
+          "description": "Core result discriminator required by the current MCP protocol."
+        },
+        "name": {
+          "type": "string",
+          "description": "Tool name, used only to correlate the result with the request."
+        },
+        "annotations": {
+          "$ref": "#/$defs/ResolvedToolAnnotations",
+          "description": "Complete effective values for the four resolvable core behavior hints."
+        },
+        "_meta": {
+          "$ref": "#/$defs/ToolResolutionResultMeta",
+          "description": "Core result metadata plus metadata owned by negotiated extensions."
+        }
+      },
+      "required": ["resultType", "name", "annotations"],
+      "additionalProperties": false,
+      "description": "Argument-specific pre-execution metadata.\n\nTool identity and schemas remain authoritative from tools/list and therefore cannot appear here."
+    },
+    "ToolResolutionResultMeta": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonObject"
+      }
+    },
+    "ResolveToolResultResponse": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": {
+          "type": "string",
+          "const": "2.0"
+        },
+        "id": {
+          "type": ["string", "number"]
+        },
+        "result": {
+          "$ref": "#/$defs/ResolveToolResult"
+        }
+      },
+      "required": ["jsonrpc", "id", "result"],
+      "additionalProperties": false
+    },
+    "ToolResolutionServerCapabilities": {
+      "type": "object",
+      "properties": {
+        "extensions": {
+          "$ref": "#/$defs/ToolResolutionExtensions"
+        }
+      },
+      "required": ["extensions"],
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      }
+    }
+  },
+  "$id": "https://modelcontextprotocol.io/extensions/tool-resolution/schema.json",
+  "title": "MCP Tool Resolution Extension",
+  "description": "Wire types for io.modelcontextprotocol/tool-resolution."
+}

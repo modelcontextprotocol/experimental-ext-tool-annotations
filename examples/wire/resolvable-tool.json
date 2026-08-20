@@ -1,0 +1,38 @@
+{
+  "name": "manage_files",
+  "description": "Read, append, replace, or delete file contents",
+  "icons": [
+    {
+      "src": "https://example.com/manage-files-dark.svg",
+      "mimeType": "image/svg+xml",
+      "theme": "dark"
+    }
+  ],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "path": { "type": "string" },
+      "action": {
+        "type": "string",
+        "enum": ["read", "append", "replace", "delete"]
+      }
+    },
+    "required": ["path", "action"]
+  },
+  "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": true,
+    "idempotentHint": false,
+    "openWorldHint": false,
+    "io.modelcontextprotocol/action-metadata": {
+      "inputMetadata": {
+        "destination": ["local"]
+      }
+    }
+  },
+  "_meta": {
+    "io.modelcontextprotocol/tool-resolution": {
+      "resolvable": true
+    }
+  }
+}

@@ -19,9 +19,10 @@ wants and will use each extension.
 
 Bring the pre-flight request proposal,
 [SEP-1862: Tool Resolution](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/1862),
-to a state where it is ready for substantive review. This remains a core
-protocol proposal rather than an experimental extension, as described in the
-[current SEP disposition](./sep-disposition.md).
+into the extension framework and validate it with implementations. The
+[`io.modelcontextprotocol/tool-resolution`](../specification/draft/tool-resolution.mdx)
+draft preserves the pre-flight use case while using negotiated extension
+capabilities and per-tool `_meta`.
 
 ## 3. Separate Human and Agent Content Presentation
 

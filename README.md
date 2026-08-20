@@ -43,6 +43,7 @@ See [docs/decisions.md](docs/decisions.md) for the decision record and
 | :--- | :--- | :--- | :--- |
 | [`io.modelcontextprotocol/trust-annotations`](specification/draft/trust-annotations.mdx) | Draft skeleton | **Primary extension.** A small, scheme-agnostic client-facing data-classification vocabulary (`sensitive`, `untrusted`) on result `_meta`, plus an optional `evidenceRef` pointer slot that carries richer payloads out-of-band. | Python SDK: [`kapil8811/mcp-trust-annotations`](https://github.com/kapil8811/mcp-trust-annotations) (138-test suite, healthcare demo, LLM usability study). |
 | [`io.modelcontextprotocol/action-metadata`](specification/draft/action-metadata.mdx) | Draft skeleton | `inputMetadata` / `returnMetadata` / outcome classifiers (incl. `requires_review`) on `ToolAnnotations`, describing where inputs go, where outputs originate, and what real-world effects a tool can cause. | Originally [SEP-2061 (Action Security Metadata)](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2061) by [@rreichel3](https://github.com/rreichel3) — closed 2026-06-13 in favour of this extension; worked example `read_drafts` / `list_inbox` / `send_email`. |
+| [`io.modelcontextprotocol/tool-resolution`](specification/draft/tool-resolution.mdx) | Experimental draft | Argument-specific, side-effect-free pre-execution metadata through the extension-defined `tools/resolve` method, with static annotations as the conservative fallback. | Repository-local TypeScript types, generated schema/docs, executable reference helpers, examples, and tests. Adapted from [SEP-1862](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/1862). |
 
 Each extension is proposed in its own pull request so it can be reviewed and
 graduate on its own clock.
@@ -110,7 +111,11 @@ This repo mirrors the structure of official extension repositories such as
 [`ext-auth`](https://github.com/modelcontextprotocol/ext-auth):
 
 ```
-specification/draft/<extension-name>.mdx   # one spec per extension (trust-annotations, action-metadata)
+specification/draft/<extension-name>.mdx   # one spec per extension
+src/                                       # TypeScript wire types and reference helpers
+schema/                                    # generated extension schemas
+examples/                                  # executable and wire examples
+tests/                                     # conformance and reference tests
 schemes/                                    # data-labelling schemes that fill the evidenceRef slot (FIDES, …)
 docs/                                       # decision log, open questions, related work
 MAINTAINERS.md                              # IG facilitators
