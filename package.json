@@ -1,0 +1,29 @@
+{
+  "name": "@modelcontextprotocol/experimental-tool-annotations",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Experimental MCP Tool Annotations extension specifications and reference implementations",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "npm run generate && npm run format && npm run typecheck && npm test && npm run example",
+    "example": "tsx examples/manage-files.ts",
+    "format": "prettier --check \".github/**/*.yml\" \".prettierrc.json\" \"package*.json\" \"tsconfig.json\" \"scripts/**/*.ts\" \"src/**/*.ts\" \"tests/**/*.ts\" \"examples/**/*.{ts,json}\" \"schema/**/*.json\" \"docs/generated/**/*.md\" \"specification/draft/tool-resolution.mdx\"",
+    "format:write": "prettier --write \".github/**/*.yml\" \".prettierrc.json\" \"package*.json\" \"tsconfig.json\" \"scripts/**/*.ts\" \"src/**/*.ts\" \"tests/**/*.ts\" \"examples/**/*.{ts,json}\" \"schema/**/*.json\" \"docs/generated/**/*.md\" \"specification/draft/tool-resolution.mdx\"",
+    "generate": "tsx scripts/generate-artifacts.ts && prettier --write schema docs/generated",
+    "test": "tsx --test tests/**/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "ajv": "^8.17.1",
+    "prettier": "^3.6.2",
+    "ts-json-schema-generator": "^2.4.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

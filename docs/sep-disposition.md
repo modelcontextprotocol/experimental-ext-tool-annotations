@@ -81,11 +81,12 @@ semantics forward, with SEP-2061 preserved as the origin and credit.
 
 ### SEP-1862 — Tool Resolution (pre-flight checks)
 
-**Proposed:** **stays Standards Track / core.** The 2026-05-28 IG meeting
-concluded pre-flight checks are inherently a protocol-level change, not an
-extension. These extensions are deliberately **response-level** (`_meta` on
-results, static `ToolAnnotations`) and do **not** depend on 1862. They compose
-with it if it lands, but do not block on it.
+**Current experiment:** adapted into the
+[`io.modelcontextprotocol/tool-resolution`](../specification/draft/tool-resolution.mdx)
+extension. SEP-2133 and the current stateless protocol now provide the
+capability negotiation needed to test a custom pre-flight method without adding
+it to core. The extension keeps static annotations as the conservative fallback
+and uses per-tool `_meta` opt-in.
 
 ### Other related SEPs (not owned here)
 
@@ -102,7 +103,7 @@ with it if it lands, but do not block on it.
 | :-- | :-- | :-- | :-- |
 | 1913 | Trust & Sensitivity Annotations | Umbrella thread; schema moves to extensions | `trust-annotations` (+ `schemes/ifc-fides`) |
 | 2061 | Action Security Metadata | **Closed 2026-06-13**; lives as extension | `action-metadata` |
-| 1862 | Tool Resolution (pre-flight) | Stays core / Standards Track | — (composes, no dependency) |
+| 1862 | Tool Resolution (pre-flight) | Adapted for extension incubation | `tool-resolution` |
 | 1984 | Comprehensive Tool Annotations | IG discussion item | — |
 | 2417 | Model Preferences for Tools | IG discussion item | — |
 | 2787 | Tool Call Attestation | Candidate `evidenceRef` scheme | (future) |

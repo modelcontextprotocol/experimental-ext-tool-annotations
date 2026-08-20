@@ -15,8 +15,11 @@ inform a future Extensions Track SEP.
 
 ## What does *not* live here
 
-- Implementation code. Reference implementations live in their own
-  repositories and are linked from the relevant `specification/draft/*.mdx`.
+- Unrelated product implementation code. Small reference implementations,
+  conformance fixtures, and schema generators that directly validate an
+  extension MAY live in this repository under `src/`, `examples/`, and `tests/`.
+  Larger SDKs and production integrations should live in their own repositories
+  and be linked from the relevant `specification/draft/*.mdx`.
 - Binding specification changes. Those are made through the
   [SEP process](https://modelcontextprotocol.io/community/sep-guidelines).
 
@@ -28,6 +31,8 @@ inform a future Extensions Track SEP.
    extension identifier and a new file.
 4. Append an entry to `docs/decisions.md` if the change reflects a design
    decision worth preserving.
+5. If the extension has repository-local schemas or reference code, run
+   `npm run check` and commit regenerated artifacts.
 
 ## Proposing a new extension
 

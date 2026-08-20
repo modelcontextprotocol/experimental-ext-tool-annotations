@@ -164,3 +164,18 @@ capable but are not universally implemented, so they cannot be the floor —
 layering the two gives universal actionability without capping what advanced
 hosts can do. This also answers the "boolean vs. richer taxonomy" tension from
 SEP-1913 review: it is not either/or, it is both, at different layers.
+
+## 2026-08-20 — Incubate Tool Resolution as an extension
+
+**Decision.** Adapt SEP-1862 into
+`io.modelcontextprotocol/tool-resolution`, negotiated through
+`ClientCapabilities.extensions` and `ServerCapabilities.extensions`. Mark
+individual tools under namespaced `Tool._meta`, retain the custom
+`tools/resolve` method, and return resolved annotations plus extension-owned
+`_meta` rather than a replacement `Tool`.
+
+**Rationale.** SEP-2133 and stateless per-request capabilities now provide a
+clean extension path. A metadata-only result preserves the single pre-flight
+exchange while resolving the review concern that a full returned `Tool` could
+change `inputSchema` after arguments were selected. Static annotations remain a
+conservative fallback for unsupported clients and errors.
