@@ -1,0 +1,177 @@
+---
+title: Display Templates
+---
+
+<Info>**Protocol Revision**: draft</Info>
+
+**Extension identifier:** `io.modelcontextprotocol/display-templates`
+
+> ⚠️ **Experimental draft.** Proposed to the Tool Annotations IG following
+> discussion in [#tool-annotations-ig](https://discord.com/channels/1358869848138059966/1482836798517543073).
+> Substantive discussion happens on PRs against this file. A reference
+> implementation exists (see below); normative text is expected to tighten
+> as additional implementations land.
+
+## Abstract
+
+MCP clients render tool calls and their arguments either verbatim (raw JSON) or via bespoke, client-specific heuristics. This works acceptably when arguments are a handful of human-readable strings, but degrades badly for servers whose arguments are dense, encoded, or symbolic: compressed identifiers, coordinate systems, protocol-level codes, or other representations optimized for machine efficiency rather than human legibility. This extension defines an optional, declarative **call-side display template**, carried under an extension-namespaced `_meta` key on `Tool`, that lets a server describe how to render a one-line human-readable preview of a call without requiring the client to understand the semantics of the underlying arguments. A complementary **result-side display text** is defined for result content blocks: a literal, server-rendered human summary of the specific result, addressing the same dual-audience problem on the output side without templating.
+
+## Motivation
+
+Tool argument schemas are optimized for two very different consumers at once: the model, which benefits from compact, low-token representations, and the human watching the session, who needs to understand at a glance what is about to happen or what just happened. This is the same dual-audience problem raised in the community discussion on tabular tool output (`modelcontextprotocol/modelcontextprotocol#930`), where large or structured results need a compact form for the model's reasoning loop and a richer form for the UI. That discussion focused on result payloads; the same gap exists on the call side.
+
+Today, the only lever available to a server is `ToolAnnotations.title`, a static, per-tool display name. It cannot reflect anything about the specific arguments of a specific call. A server whose tools take arguments like `q7f2::0xA3`, packed coordinate tuples, or any other compact encoding has no standard way to tell a client "here is how to show this to a person"; every client either dumps raw JSON or invents its own guesswork, and that guesswork is inconsistent from one agentic CLI to the next. This undermines a basic transparency goal: a user should be able to see, in plain language, what an agent is doing, regardless of which client they're using and regardless of how a server's arguments are internally represented.
+
+This gap is already being filled ad hoc outside the specification. OpenAI's Apps SDK defines vendor `_meta` keys, `openai/toolInvocation/invoking` and `openai/toolInvocation/invoked`, that let a server supply status strings shown to the user around a tool call. Their adoption demonstrates the demand; their design demonstrates the limitations of leaving this to vendor convention: the strings are static per-tool (they cannot reflect the arguments of a specific call), immutable after registration, single-language, and honored only by one client. A spec-level, argument-aware mechanism addresses all four; because the result-side display text is rendered fresh by the server per response, it can additionally be localized and made outcome-specific in ways a static registration string cannot.
+
+The same gap is visible inside the clients themselves, and each has already built a private answer to it. Six agentic CLIs, surveyed by reading the rendering code rather than the documentation:
+
+| Client | A first-party tool renders as | A tool discovered over MCP renders as |
+| --- | --- | --- |
+| [goose](https://github.com/block/goose/blob/main/crates/goose-cli/src/session/output.rs) | a hand-written renderer chosen by tool name (`shell`, `write`, `edit`, `execute_code`, `delegate`), with `load` rendered silently | a generic dump of argument keys and values |
+| [gemini-cli](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/tools/tools.ts) | `getDescription()`, documented as returning "a markdown string describing what the tool will do", plus an optional `getDisplayTitle()` for the UI; built-ins override both | [`safeJsonStringify(this.params)`](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/tools/mcp-tool.ts) |
+| [Codex](https://github.com/openai/codex/blob/main/codex-rs/tui/src/history_cell/mcp.rs) | a bespoke history cell per tool | `server.tool(args)`, arguments as compact JSON |
+| [opencode](https://github.com/sst/opencode/blob/dev/packages/opencode/src/cli/cmd/run/tool.ts) | `TOOL_RULES` maps the name to an icon, a title and a description | `⚙ <name> <JSON.stringify(input)>` |
+| [cline](https://github.com/cline/cline/blob/main/apps/cli/src/tui/components/dialogs/tool-approval.tsx) | `formatApprovalParams()` switches across nine tool names | `JSON.stringify(rawInput, null, 2)`, truncated to a 200-character preview |
+| Claude Code | a bespoke one-line summary per tool | its namespaced name plus its parameters |
+
+Claude Code is closed source, so that row is read off observed output rather than code; the other five are cited above and can be checked.
+
+Six clients, six incompatible in-house mechanisms, and one shape common to all of them: the bespoke rendering path is reachable only by first-party tools, and anything arriving over MCP has its arguments dumped. Two of them stop just short of the mechanism proposed here, for want of a protocol path to it. Codex reads a `title` out of the arguments for Node REPL servers and shows that instead, capped at 80 graphemes: a display hint, supplied by the caller, honoured by the client, available to exactly one blessed server. opencode's fallback prefers a `state.title` over the JSON dump whenever one is present, but nothing in MCP lets a server put one there.
+
+Two things follow. The demand is not hypothetical, since six independent teams each paid to build a version of it. And none of these clients is asking a model to narrate its tool calls: they render deterministically, client-side, off data they already hold. What they lack is any way for the server that owns the encoding to take part in that rendering.
+
+The problem is general. It is not specific to any one server's encoding scheme, and the design below does not depend on knowing what any particular server encodes or why: only on the fact that dense/opaque argument and result encodings are common and growing more so as servers optimize for token efficiency in high-tool-count environments (a concern the Skills Over MCP Working Group has been examining from the tool-bloat angle).
+
+## Specification
+
+### Dependencies
+
+This extension depends only on the base MCP `_meta` mechanism and standard JSON Schema. It does not require Tool Resolution ([SEP-1862](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/1862)), though it composes with it (see Rationale).
+
+The pre-execution and post-execution cases are treated separately, because the server has fundamentally different information available at each point: at call time it has only a schema; at result time it has the actual, specific outcome. A single flat template cannot serve both well, especially for a tool whose single `inputSchema` covers many distinct underlying actions with different shapes.
+
+### 1. Call-side preview: `template` on `Tool` `_meta`
+
+A server MAY attach a display template to a tool under the extension-namespaced `_meta` key:
+
+```jsonc
+{
+  "name": "mix_set",
+  "inputSchema": {
+    "type": "object",
+    "properties": { "bus": {}, "gain_db": {}, "ramp_ms": {} }
+  },
+  "_meta": {
+    "io.modelcontextprotocol/display-templates": {
+      "template": "set {bus} bus to {gain_db} dB over {ramp_ms} ms"
+    }
+  }
+}
+```
+
+For tools whose `inputSchema` is a flat object, `template` behaves as a literal text template with `{argumentName}` placeholders substituted from top-level input properties.
+
+For tools whose `inputSchema` expresses multiple shapes via `oneOf`/`anyOf`, the standard idiom for "one tool, several distinct actions", a template MAY be attached as a sibling key on each individual branch subschema:
+
+```jsonc
+{
+  "inputSchema": {
+    "type": "object",
+    "oneOf": [
+      {
+        "title": "move",
+        "io.modelcontextprotocol/display-template": "move {target} to {destination}",
+        "properties": { "target": {}, "destination": {} }
+      },
+      {
+        "title": "delete",
+        "io.modelcontextprotocol/display-template": "delete {target}",
+        "properties": { "target": {} }
+      }
+    ]
+  }
+}
+```
+
+### Rendering semantics (normative for implementing clients)
+
+- Substitution is literal string interpolation of `{propertyName}` placeholders from the call's top-level arguments. No expressions, no conditionals, no formatting functions.
+- A placeholder whose argument is missing, or whose value is not a scalar, renders as `...`.
+- `{{` and `}}` render as literal braces.
+- When the schema has `oneOf`/`anyOf` branches, the client selects the template of the first branch (in document order) the arguments validate against. A client that does not or cannot validate against branches falls back to the tool-level `template` if present, otherwise to its existing raw display.
+- Substituted values MUST be treated as untrusted text and escaped for the client's rendering surface, same as any other server-supplied string.
+- Clients that do not implement this extension MUST ignore it; no capability negotiation is required.
+
+### 2. Result-side: rendered `text`, not a template
+
+Templating is the wrong tool for the result side, because by the time a server is producing a response it already has the actual outcome in hand: there is no shape it needs to describe abstractly, only a specific thing that happened. A server MAY attach a literal, already-rendered, human-readable string, computed fresh for that specific response, with no placeholders and no client-side substitution, under the same namespaced `_meta` key on a result content block:
+
+```jsonc
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "<model-facing payload>",
+      "_meta": {
+        "io.modelcontextprotocol/display-templates": {
+          "text": "moved 14 items to /archive"
+        }
+      }
+    }
+  ]
+}
+```
+
+This generalizes cleanly across arbitrarily different response shapes from the same tool, since the server, not a static declaration, decides what to say each time. It extends the same dual-audience pattern already discussed for tabular output in #930, generalized beyond tables: `text`/`structuredContent` stays optimized for the model, the display text is optimized for the human watching.
+
+### Lifecycle and `list_changed`
+
+The two fields have different lifecycles. The call-side `template` is part of the tool *definition* — it rides on `Tool` `_meta` (and, branch-scoped, inside `inputSchema` subschemas), so it follows the definition's lifecycle and **does** participate in `tools/list_changed`: a client that re-fetches the tool list on `list_changed` picks up template changes with no additional mechanism, and MUST NOT cache templates across a `list_changed` notification. The result-side `text` is **response-level** — rendered fresh for each specific result, never part of the definition — and therefore does not participate in `list_changed`, mirroring the response-level fields of `io.modelcontextprotocol/trust-annotations`.
+
+### Non-goals
+
+- This is not MCP Apps by a lighter route, and it is not a UI-directive system (no buttons, no widgets, no layout). MCP Apps addresses servers that ship an actual interactive surface (HTML) for a client to host; this extension has no surface at all. It is a hint for the one-line string a client already prints for every tool call and result, including in TUIs and agentic CLIs that will never embed an app, which is why it belongs with tool annotations rather than with Apps. Application-specific UI directives (as referenced in #930) are likewise a separate, larger surface; this extension deliberately stays within "one string, one line, plain substitution."
+- Neither field changes what the model receives. The template and the display text only affect what a human observer sees in the client's rendering of the call/result; the model continues to operate on the actual arguments and content as today.
+- Localization of call-side templates is out of scope; they are static declarations and share the single-language limitation of any registration string. (Result-side display text, being rendered per-response, does not share it.)
+
+### Limitations
+
+The call-side template substitutes argument values verbatim; it cannot translate them. A tool whose call is a single encoded compound argument, such as a packed program, an opcode sequence, or a compressed structure, therefore gains little on the call side: the best available template simply exhibits the encoded string in a labeled frame (e.g. `play patch {patch}`). This is a deliberate consequence of keeping the template a hint rather than a language. For such tools, full pre-execution legibility requires the server itself to render the preview, which is the shape of the resolution mechanism proposed in SEP-1862 and is out of scope here. The result side has no such gap: the display text is rendered by the server, which alone understands its own encoding, after the outcome is known.
+
+## Rationale
+
+- **Why can't the model just be told to explain the call (via field descriptions or prompting)?** Because the two audiences have different economics and different reliability requirements. Descriptions asking the model to narrate every call spend context tokens on every request, and compliance is probabilistic, per-call, and invisible when it fails. A declarative template costs zero model tokens, renders deterministically on the client, and works even when no model is in the render loop at all (session logs, transcript review, dashboards, replays). The whole point of dense argument encodings is saving model tokens; spending model tokens to undo the density defeats them. It is also how clients already behave: every per-tool renderer surveyed in Motivation runs client-side, off the call it already holds, without consulting a model at all. The question is not whether this rendering should happen, since it already does; it is whether the server that owns the encoding is allowed any say in it.
+- **Why a template string and not a richer scheme?** Per the maintainers' evaluation framework for new annotations ("Tool Annotations as Risk Vocabulary"), a hint should map to a concrete, bounded client behavior and shouldn't ask for a contract. A flat substitution template is the smallest thing that solves the legibility problem, is trivially safe to ignore, and can't smuggle in behavior beyond string formatting. A full expression/templating language (conditionals, formatting functions) was considered and rejected as scope creep; it starts to look like a contract clients must faithfully evaluate rather than a hint they can take or leave.
+- **Why an extension-namespaced `_meta` key rather than new `ToolAnnotations` fields?** Three reasons. First, SEP-2133 makes the namespaced key the standardized mechanism for exactly this graduation path: the extension can be released, iterated & adopted independently, and promoted into `ToolAnnotations` later if it proves out. Second, it matches the convention already established by this repository's primary extension (`io.modelcontextprotocol/trust-annotations`), which carries its vocabulary on result `_meta`. Third, it is the only carrier that works on current tier-1 SDKs: as of the Python SDK 2.x, `ToolAnnotations` and content-block `Annotations` are strict models that silently drop unknown keys at both serialization ends, so annotation-borne experimentation is no longer possible without a spec change, while `_meta` passes through untouched. (The 1.x SDK line passed unknown annotation keys through; the reference implementation retains a fallback for servers of that era.)
+- **Trust posture:** like `title`, this field needs no trust to be useful; the worst case from a malicious or careless server is a misleading or garbled display string, not an unsafe action. It sits in the same "informational, no security implication" bucket as the existing `title` field. (See Security Implications for the oversight caveat and the mitigations clients SHOULD apply.)
+- **Why not pre-execution resolution?** SEP-1862 proposes a round-trip in which the server returns argument-specific metadata for a specific pending call. That mechanism is strictly more expressive than a declarative template: the server can render anything, including translations of encoded arguments. But it costs a network round-trip per call, requires the server to be reachable at render time, and is a much larger protocol surface. The two are complementary rather than competing: templates cover the common case (scalar, human-legible argument values) for free, and resolution remains the right escalation path for the cases templates cannot reach (see Limitations).
+- **Why split templates (call-side) from rendered text (result-side)?** An earlier version of this proposal used a single template mechanism for both. That breaks down for any tool whose single `inputSchema`/response covers several distinct underlying actions with different shapes; a single static template can't adapt to shapes it wasn't written for. Branch-scoped templates solve this on the call side using a schema idiom (`oneOf`/`anyOf`) that already exists for exactly this "one tool, many shapes" situation. On the result side there is an even simpler fix: the server already knows the specific outcome by the time it responds, so it can just say so directly rather than describing an abstract shape for the client to fill in.
+
+## Backward Compatibility
+
+Fully backward compatible. Both fields are optional `_meta` payloads. Servers that don't set them see no change. Clients that don't read them see no change beyond continuing to render raw arguments/content, exactly as today. `_meta` passes through every current SDK untouched, including the strict-model Python SDK 2.x line that strips unknown annotation keys, which is precisely why `_meta` is the carrier (see Rationale).
+
+## Reference Implementation
+
+**soundboard** (https://github.com/maxiboch/soundboard): a deliberately minimal stdio server modeling game-audio middleware (a mixer, a cue transport, and a retro SFX synthesizer) whose three tools exercise the three cases the design must handle: a flat schema with scalar arguments (tool-level template), a `oneOf`-branched schema (branch-scoped templates), and a dense packed patch-string argument in the spirit of the sfxr family's base58 share codes (call-side raw fallback per Limitations, result-side display text). It ships with a matching client-side renderer implementing the normative substitution and branch-matching rules above, including the omission indicator and discriminator carve-out from Security Implications, runnable end-to-end over the unmodified Python SDK (2.x).
+
+## Security Implications
+
+- Substitution is literal string interpolation only; there is no expression evaluation, so the field cannot be used to execute code or alter control flow.
+- Clients must treat substituted values as untrusted text requiring escaping for their render target, identical to existing guidance for any other server-supplied string content.
+- Because the field carries no behavioral weight (it cannot skip confirmations, alter permissions, or change tool behavior), it does not need to be restricted to trusted servers the way `readOnlyHint`/`destructiveHint` do; a malicious server gains no capability through these fields. The residual risk is a misleading display, addressed in the two points below.
+- Because these fields exist to support human oversight, a misleading display string is not fully harmless on the result side: a server could characterize its own action inaccurately via the display text. This is the same trust class as a misleading `content` payload, which the server also fully authors today; the field grants no capability the server did not already have.
+- The sharper case is call-side omission. A template that references only a subset of the supplied arguments renders a line that is accurate as far as it goes while concealing the rest: `read {path}`, on a tool that also accepts an `upload_to` argument, shows the innocuous argument and hides the one that matters. Because the call-side render can inform a pre-execution consent decision, selective display is a materially different risk from a garbled one. Accordingly: clients MUST keep the raw arguments and raw content reachable from the rendered view (e.g., an expandable detail); clients SHOULD visibly indicate when a call supplies arguments the matched template does not reference (for example, an unrendered-argument count or trailing ellipsis marker; an argument whose value is pinned by the matched branch's schema, e.g. a `const` discriminator, counts as referenced, since selecting that branch's template communicates it); and clients SHOULD present raw arguments rather than the template at any confirmation prompt for tools annotated `destructiveHint: true` or otherwise permission-gated.
+
+## Open Questions
+
+- Whether the branch-scoped key should be spelled `x-mcp-display-template` inside schemas, following the SEP-2356 precedent for schema-embedded extension keywords, rather than the reverse-DNS spelling used above.
+- Whether result-side display text should also be permitted at the `CallToolResult` level (one string per result) in addition to per-content-block, for servers whose results are multi-block but whose human summary is singular.
+- Naming of the inner keys (`template` / `text`) versus more explicit spellings (`callTemplate` / `displayText`).
+- Whether one string is enough. gemini-cli found it needed both a description of the call and a shorter title for the UI, and Codex caps its Node REPL title at 80 graphemes; constrained surfaces (status lines, one-line logs) may want a short form alongside the fuller preview.
+
+## Changelog
+
+- 2026-08-04: Initial draft, converted from a core-spec SEP draft on IG guidance; carrier moved from `ToolAnnotations`/`Annotations` fields to the extension-namespaced `_meta` key.
+- 2026-09-04: Motivation gains a survey of how six agentic CLI clients render tool calls today (goose, gemini-cli, Codex, opencode, cline, Claude Code), read from their rendering code where it is public. Adds Codex's Node REPL `title` carve-out and opencode's `state.title` preference as prior art, and grounds the field-descriptions rationale in observed client behaviour rather than argument alone.

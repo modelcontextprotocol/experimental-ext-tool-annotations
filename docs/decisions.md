@@ -164,3 +164,27 @@ capable but are not universally implemented, so they cannot be the floor —
 layering the two gives universal actionability without capping what advanced
 hosts can do. This also answers the "boolean vs. richer taxonomy" tension from
 SEP-1913 review: it is not either/or, it is both, at different layers.
+
+- 2026-08-04 — display-templates: wire carrier is the extension-namespaced
+  `_meta` key (`io.modelcontextprotocol/display-templates`), not new
+  `ToolAnnotations`/`Annotations` fields: matches the trust-annotations
+  precedent in this repo, follows SEP-2133's independent-graduation path,
+  and is the only carrier that survives the Python SDK 2.x strict models,
+  which strip unknown annotation keys at both serialization ends.
+
+- 2026-09-04 — display-templates: the motivation rests on observed client
+  behaviour rather than on argument alone. Six agentic CLIs were surveyed by
+  reading their rendering code: goose, gemini-cli, Codex, opencode, cline and
+  (from observed output, since it is closed source) Claude Code. All six render
+  tool calls to a human, all six special-case some tools by name, and in all six
+  that path is reachable only by first-party tools; anything discovered over MCP
+  has its arguments dumped. Two have already built partial, non-interoperable
+  versions of this mechanism: Codex reads a `title` argument for Node REPL
+  servers, and opencode prefers a `state.title` over its JSON fallback.
+
+  **Rationale.** This changes what the proposal is arguing. Not that clients
+  ought to start rendering tool calls legibly, which invites a debate about
+  whether it is worth doing, but that they already do it, privately and
+  incompatibly, and that MCP servers are the only participants excluded. It also
+  answers the field-descriptions objection empirically: none of these renderers
+  consults a model, so a static description in the schema cannot reach them.
