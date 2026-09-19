@@ -70,6 +70,26 @@ record before any rename lands:
 - Open strings vs. closed enums for `destination` / `source` / `sensitivity`.
 - Does `requiresReview` need a machine-readable *reason* for good client UX?
 
+## display-templates
+
+- **Branch-key spelling.** Should the branch-scoped key inside `oneOf`/`anyOf`
+  subschemas be spelled `x-mcp-display-template`, following the
+  [SEP-2356](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/2356)
+  precedent for schema-embedded extension keywords, rather than the reverse-DNS
+  spelling in the draft?
+- **Result-side attachment point.** Per-content-block only, or also permitted at
+  the `CallToolResult` level (one string per result) for servers whose results
+  are multi-block but whose human summary is singular?
+- **Inner key naming.** `template` / `text` versus more explicit spellings
+  (`callTemplate` / `displayText`).
+- **One string or two?** gemini-cli found it needed both a description of the
+  call (`getDescription()`) and a shorter title for the UI
+  (`getDisplayTitle()`), and Codex caps its Node REPL title at 80 graphemes.
+  This extension defines a single `template`. Is one string enough, or do
+  constrained surfaces (status lines, one-line logs, notification text) need a
+  short form alongside the fuller preview? Raised by the 2026-09-04 client
+  survey rather than by review.
+
 ## ifc-fides (scheme)
 
 - Inline `_meta.ifc` for low-friction adoption vs. always behind `evidenceRef`.
