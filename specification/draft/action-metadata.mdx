@@ -67,7 +67,13 @@ Carried under the extension-namespaced key on `ToolAnnotations`:
         "sensitivity": "public"
       },
       "outcome": "consequential",    // benign | consequential | irreversible
-      "requiresReview": true          // host SHOULD seek human confirmation
+      "requiresReview": true,         // host SHOULD seek human confirmation
+      "undo": {                       // optional; only with outcome: consequential
+        "tool": "cancel_booking",
+        "windowSec": 86400,
+        "argumentsFrom": { "booking_id": "/bookingId" }
+      },
+      "cost": { "currency": "USD", "typical": 38.5, "max": 40 }  // optional, per call
     }
   }
 }
@@ -81,6 +87,12 @@ Carried under the extension-namespaced key on `ToolAnnotations`:
 | `returnMetadata.sensitivity` | The kind of data the tool is designed to return. |
 | `outcome` | Real-world effect class: `benign` / `consequential` / `irreversible`. |
 | `requiresReview` | The tool author signals that a host SHOULD obtain explicit human confirmation before invocation. |
+| `undo.tool` | Name of a tool on the same server whose successful call reverses this tool's effect. |
+| `undo.windowSec` | Seconds after a successful call during which the undo is expected to succeed. Absent means no stated limit. |
+| `undo.argumentsFrom` | Map from each argument of `undo.tool` to an [RFC 6901](https://www.rfc-editor.org/rfc/rfc6901) JSON Pointer into this call's `structuredContent`. |
+| `cost.currency` | ISO 4217 currency code of the amounts below. |
+| `cost.typical` | Typical amount one call charges to the user or their account. Informational. |
+| `cost.max` | The most one call is expected to charge. Hosts SHOULD use this for pre-call checks. |
 
 > Exact enum value sets are inherited from SEP-2061 as the starting point and
 > are **not** re-litigated here. With SEP-2061 now closed, this draft is where
@@ -95,6 +107,42 @@ property. It was intentionally moved out of [`trust-annotations`](./trust-annota
 `outcome` because both describe the *act* of calling the tool rather than the
 *data* in flight.
 
+### `undo`: making `consequential` actionable
+
+`outcome: consequential` tells a host that a call has a real effect, not whether
+that effect can be taken back. `undo` closes that gap with something a host can
+execute rather than a description it has to interpret.
+
+1. `undo` is only meaningful with `outcome: consequential`. A tool with
+   `outcome: irreversible` MUST NOT declare `undo`, and hosts MUST ignore it if
+   present.
+2. `undo.tool` MUST name a tool in the same server's `tools/list`. Hosts SHOULD
+   ignore `undo` otherwise.
+3. When `argumentsFrom` is present the server SHOULD declare an `outputSchema`.
+   If any pointer does not resolve for a given result, hosts MUST treat that call
+   as not undoable. Hosts MUST validate the built arguments against
+   `undo.tool`'s `inputSchema` before calling it.
+4. Hosts MAY use `undo` to relax confirmation for consequential calls, for
+   example running without a prompt but telling the user afterwards. A host
+   that does so SHOULD offer the undo call, prefilled from `argumentsFrom`, until
+   `windowSec` expires.
+5. If a call to `undo.tool` fails, hosts SHOULD stop relying on the original
+   tool's `undo` claim, for example by asking before each call again. A failed
+   undo is direct evidence the declaration was wrong, and the main check against
+   an `undo` declared only to avoid prompts.
+
+### `cost`
+
+1. `cost` covers money the call's effect charges to the user or their account
+   (a purchase, a paid API). It does not cover the host's own model usage.
+2. Where cost depends on arguments, servers SHOULD supply the argument-specific
+   value through Tool Resolution when it is negotiated. The static value is then
+   a conservative fallback.
+3. Like every field here, `cost` is a server claim (see
+   [trust model](../../docs/trust-model.md)). Hosts that enforce spending limits
+   SHOULD prefer amounts actually charged when reported, and SHOULD stop
+   trusting `max` for a tool that exceeds it.
+
 ### Lifecycle and `list_changed`
 
 These fields are part of the **tool definition** (`ToolAnnotations`). They are
@@ -107,7 +155,9 @@ change. (This is the opposite of `trust-annotations`, which is response-level.)
 `outcome: irreversible` overlaps conceptually with `destructiveHint` but is
 strictly richer (a three-way classification vs. a boolean) and is scoped to the
 real-world effect rather than to whether the operation is destructive to
-server-side state. The IG will need to decide whether action metadata
+server-side state. `undo` refines this further: `destructiveHint: true` with a
+declared `undo` describes an effect that is destructive but recoverable, which
+no combination of the legacy hints can express. The IG will need to decide whether action metadata
 *supersedes* or *coexists with* the legacy hints before any graduation.
 
 ## Reference implementation
@@ -118,6 +168,13 @@ schemas and divergent action metadata. A public MCP server emitting these
 fields (candidate: [`github-mcp-server`](https://github.com/github/github-mcp-server))
 would anchor the draft in a real ecosystem.
 
+For `undo` and `cost`: [autonomy-gateway](https://github.com/probita-ai/autonomy-gateway),
+a dependency-free MCP gateway that reads all fields of this extension, uses
+`outcome`, `undo` and `requiresReview` to decide per call whether to run, notify
+or ask, builds the undo call from `argumentsFrom`, raises a tool's risk after a
+failed undo, and pauses calls whose `cost.max` would exceed a user's budget.
+Tests cover each rule above.
+
 ## Open questions
 
 - Coexistence vs. replacement of `destructiveHint` / `readOnlyHint`.
@@ -125,6 +182,13 @@ would anchor the draft in a real ecosystem.
   (consistent with `evidenceRef.type`) or closed enums.
 - Whether `requiresReview` needs a machine-readable *reason* (vs. a bare
   boolean) to drive good client UX.
+- Whether `undo` should allow a tool on another server (e.g. a payments server
+  refunding a purchase), which needs cross-server identity.
+- Whether `windowSec` suffices, or some undos need conditions ("before
+  departure").
+- Whether `cost` should allow non-currency units (API credits, downstream
+  tokens), and whether declaring `cost.max` should oblige the server to refuse
+  calls that would exceed it.
 
 ## Changelog
 
@@ -132,3 +196,4 @@ would anchor the draft in a real ecosystem.
 | ---------- | ------------------------------------------------------------------- |
 | 2026-06-10 | Initial draft skeleton, carrying SEP-2061 into the experimental repo; absorbed `requiresReview` from the trust taxonomy. |
 | 2026-06-15 | SEP-2061 closed in favour of this extension; this draft is now the canonical home for the field semantics. |
+| 2026-11-21 | Added optional `undo` (`tool`, `windowSec`, `argumentsFrom`) and `cost` (`currency`, `typical`, `max`), with host rules and open questions. |
