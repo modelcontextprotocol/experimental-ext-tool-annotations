@@ -21,6 +21,7 @@ here rather than as a top-level extension.
 | :--- | :--- | :--- | :--- |
 | [FIDES information-flow control](./ifc-fides.md) | `ifc.fides.v1` | Draft skeleton | [arXiv:2505.23643](https://arxiv.org/abs/2505.23643) |
 | [Data classification](./data-class.md) | `data-class.v1` | Draft skeleton | SEP-1913 taxonomy (`class` + regulatory scope) |
+| [Derivation lineage](./lineage-derivation.md) | `lineage.derivation.v1` | Draft skeleton | [doi:10.1109/ACCESS.2026.3730363](https://doi.org/10.1109/ACCESS.2026.3730363) |
 
 ## Candidate schemes (not yet drafted)
 
