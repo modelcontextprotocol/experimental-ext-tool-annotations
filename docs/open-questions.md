@@ -94,6 +94,9 @@ record before any rename lands:
   ([@JustinCappos](https://github.com/modelcontextprotocol/modelcontextprotocol/issues/711#issuecomment-2967516811)).
   This is a propagation property no single response annotation can guarantee on
   its own; it needs the taxonomy and `evidenceRef` stable first.
+  Candidate path: the [`lineage.derivation.v1`](../schemes/lineage-derivation.md)
+  scheme carries per-result derivation lineage so a host can re-check a derived
+  item's ancestors at read time, without the extension specifying propagation.
 - **Session-level propagation rules** — escalation semantics and the
   **sequence-shape** gap: "this was call N in a flagged sequence" has no response
   annotation surface today ([marras0914](https://github.com/modelcontextprotocol/modelcontextprotocol/pull/1913)).
